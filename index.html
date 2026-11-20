@@ -80,6 +80,7 @@ details li{margin-bottom:6px}
   <button type="button" role="tab" data-tab="spenningsfall" aria-selected="false">Spenningsfall</button>
   <button type="button" role="tab" data-tab="kortslutning" aria-selected="false">Kortslutning</button>
   <button type="button" role="tab" data-tab="varmekabel" aria-selected="false">Varmekabel</button>
+  <button type="button" role="tab" data-tab="kontinuitet" aria-selected="false">Beregnet kontinuitet</button>
   <button type="button" role="tab" data-tab="innstillinger" aria-selected="false">Innstillinger</button>
 </nav>
 
@@ -299,6 +300,34 @@ details li{margin-bottom:6px}
 <section class="res">
   <div id="cc_v" class="verdict"><b>–</b><span></span></div>
   <div class="card"><table><tbody id="cc_calc"></tbody></table><div id="cc_warn"></div></div>
+</section>
+</main>
+<main class="wrap hide" data-panel="kontinuitet">
+<section class="form">
+  <div class="card"><h2>Kabel</h2>
+    <button type="button" class="reset" id="kt_hent" style="margin-bottom:12px">Hent kabel fra Krav 1 og 2</button>
+    <div class="grid">
+      <div class="matw hide"><label for="kt_mat">Ledermateriale</label><select id="kt_mat" class="matsel"><option value="cu">Kobber (Cu)</option><option value="al">Aluminium (Al)</option></select></div>
+      <div><label for="kt_mm">Tverrsnitt fase (mm²)</label><select id="kt_mm"></select></div>
+      <div><label for="kt_pe">Tverrsnitt PE (mm²)</label><select id="kt_pe"></select></div>
+      <div><label for="kt_l">Kabellengde (m)</label><input id="kt_l" type="number" inputmode="decimal" step="0.5" min="0" value="25"></div>
+      <div><label for="kt_t">Temperatur ved måling (°C)</label><input id="kt_t" type="number" inputmode="decimal" step="1" value="20"></div>
+    </div></div>
+  <div class="card"><h2>Måling (valgfritt)</h2>
+    <div class="grid">
+      <div><label for="kt_what">Hva er målt</label><select id="kt_what"><option value="pe">PE alene (R2)</option><option value="r12" selected>Fase + PE (R1+R2)</option><option value="loop">Fase + N / fase + fase</option></select></div>
+      <div><label for="kt_mal">Målt verdi (Ω)</label><input id="kt_mal" type="number" inputmode="decimal" step="0.001" min="0" placeholder="f.eks. 0,45"></div>
+      <div><label for="kt_tol">Tillatt avvik over beregnet (%)</label><input id="kt_tol" type="number" inputmode="decimal" step="1" min="0" value="20"></div>
+    </div>
+    <p class="hint">Nullstill måleledningene før måling. Klemmer og koblingspunkter gir litt ekstra motstand – derfor tillatt avvik. Avviket settes etter egen/firmaets praksis.</p></div>
+  <div class="card"><details><summary>Slik regnes det</summary><ul>
+    <li>R = R<sub>20</sub> · L · (1 + α·(T − 20)). R<sub>20</sub> fra lederstandarden (IEC 60228), α = 0,00393 (Cu), 0,00403 (Al).</li>
+    <li>R1+R2 = fase + PE i serie (målt med fase og PE kortsluttet i én ende).</li>
+    <li>Sammenligningen er et hjelpemiddel for kontinuitetsmåling etter NEK 400-6 – NEK gir ikke en fast tallgrense.</li></ul></details></div>
+</section>
+<section class="res">
+  <div id="kt_v" class="verdict"><b>–</b><span></span></div>
+  <div class="card"><table><tbody id="kt_calc"></tbody></table><div id="kt_warn"></div></div>
 </section>
 </main>
 <section class="panel hide" data-panel="innstillinger">
@@ -568,6 +597,35 @@ function hent(pfx){const K=window.KRAV;if(!K)return;$(pfx+'_mat').value=K.mat;fi
   else{fillSel('ks_pe',K.mat,0,2.5);$('ks_pe').value=String(K.mm);$('ks_in').value=K.In;calcKS()}}
 $('sf_hent').addEventListener('click',()=>hent('sf'));$('ks_hent').addEventListener('click',()=>hent('ks'));
 fillAll();load2();applyAl();calcSF();calcKS();calcCC();
+
+/* ---- beregnet kontinuitet ---- */
+const ALPHA={cu:0.00393,al:0.00403};
+const F3=['kt_mat','kt_mm','kt_pe','kt_l','kt_t','kt_what','kt_mal','kt_tol'];
+function calcKT(){
+  const mat=$('kt_mat').value,mm=parseFloat($('kt_mm').value),pe=parseFloat($('kt_pe').value),L=num('kt_l'),T=num('kt_t');
+  if(![L,T].every(Number.isFinite)||L<0){verdict('kt_v',null,'–','Sjekk inndata');rows('kt_calc',[]);return}
+  const kf=1+ALPHA[mat]*(T-20);
+  const r1=R20[mat][mm]/1000*L*kf,r2=R20[mat][pe]/1000*L*kf;
+  const exp={pe:r2,r12:r1+r2,loop:2*r1}[$('kt_what').value];
+  const m=num('kt_mal'),tol=num('kt_tol')||0,w=[];
+  const lim=exp*(1+tol/100);
+  if(Number.isFinite(m)){
+    const ok=m<=lim, dev=(m/exp-1)*100;
+    verdict('kt_v',ok,ok?'OK':'IKKE OK',`Målt ${f(m,3)} Ω · beregnet ${f(exp,3)} Ω · avvik ${dev>=0?'+':''}${f(dev,0)} %`);
+    if(!ok)w.push('Målt verdi er høyere enn forventet. Sjekk koblinger/klemmer, at riktig leder er målt, og at lengden stemmer.');
+    if(m<exp*0.5)w.push('Målt verdi er mye lavere enn beregnet – sjekk lengde, tverrsnitt eller om det finnes parallelle forbindelser.');
+  } else verdict('kt_v',null,`${f(exp,3)} Ω`,'Forventet verdi – legg inn målt verdi for sammenligning');
+  rows('kt_calc',[['R fase (R1)',f(r1,3)+' Ω'],['R PE (R2)',f(r2,3)+' Ω'],['R1 + R2',f(r1+r2,3)+' Ω'],['Fase + N / fase + fase',f(2*r1,3)+' Ω'],['Maks godtatt ('+f(tol,0)+' % avvik)',f(lim,3)+' Ω'],['Temperaturfaktor',f(kf,3)],['R20 fase / PE',f(R20[mat][mm],3)+' / '+f(R20[mat][pe],3)+' Ω/km']]);
+  warnOut('kt_warn',w);
+  try{const o={};F3.forEach(k=>o[k]=$(k).value);localStorage.setItem('elk-kont',JSON.stringify(o))}catch(e){}}
+function fillKT(){fillSel('kt_mm',$('kt_mat').value,0,2.5);fillSel('kt_pe',$('kt_mat').value,0,2.5)}
+fillKT();
+try{const o=JSON.parse(localStorage.getItem('elk-kont')||'null');if(o){if(o.kt_mat)$('kt_mat').value=o.kt_mat;fillKT();F3.forEach(k=>{if(o[k]!=null)$(k).value=o[k]})}}catch(e){}
+F3.forEach(k=>{$(k).addEventListener('input',calcKT);$(k).addEventListener('change',calcKT)});
+$('kt_mat').addEventListener('change',()=>{fillKT();calcKT()});
+$('setAl').addEventListener('change',()=>{applyAl();calcKT()});
+$('kt_hent').addEventListener('click',()=>{const K=window.KRAV;if(!K)return;$('kt_mat').value=K.mat;fillKT();$('kt_mm').value=String(K.mm);$('kt_pe').value=String(K.mm);if(num('sf_l')>0)$('kt_l').value=$('sf_l').value;calcKT()});
+applyAl();calcKT();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 }
 </script>
