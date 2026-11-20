@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#16191c">
+<link rel="manifest" href="manifest.json">
+<title>Kurskontroll krav 1 og 2</title>
+<style>
+/* VOICE: nøktern, teknisk, som et måleinstrument på byggeplass
+   IDEA: et kontrollpanel / tavle-dokumentasjonsskjema
+   PICTURE: stort resultatpanel med to "lamper" (krav 1, krav 2) og Iz/I2-målere
+   COLOUR+TYPE: stålgrå panel, svart, hvit, alarmrød; grønn kun for OK-lampe. System-sans (offline)
+   LAYOUT: resultat først (mobil) / til høyre sticky (bred), inndata i én kolonne */
+:root{color-scheme:light dark;--bg:light-dark(#d5dbe0,#16191c);--panel:light-dark(#ffffff,#22272b);--ink:light-dark(#111417,#eef1f3);--mut:light-dark(#4a535b,#9aa5ae);--line:light-dark(#b9c1c8,#363d43);--red:#e8251a;--ok:#13894a;--acc:light-dark(#111417,#eef1f3)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overflow-x:clip}
+header{padding:20px max(4vw,16px) 6px}
+h1{font-size:clamp(24px,4vw,34px);line-height:1.08;margin:0;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--mut);font-size:15px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:20px;padding:14px max(4vw,16px) 40px;max-width:1240px;margin:0 auto;align-items:start}
+.res{grid-column:2;grid-row:1;position:sticky;top:12px}
+.form{grid-column:1;grid-row:1}
+@media(max-width:820px){.wrap{grid-template-columns:minmax(0,1fr);padding-bottom:90px}.res,.form{grid-column:1;grid-row:auto;position:static}}
+.wide{grid-column:1/-1}
+.mini{display:none;position:fixed;left:0;right:0;bottom:0;z-index:5;align-items:center;justify-content:space-between;gap:10px;padding:12px max(4vw,16px) calc(12px + env(safe-area-inset-bottom));background:#3b4248;color:#fff;font-size:15px;text-decoration:none}
+.mini.ok{background:var(--ok)}@media(max-width:820px){.mini{display:flex}}.mini.bad{background:var(--red)}.mini b{font-size:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 18px;margin-bottom:14px}
+.card h2{font-size:17px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
+input,select{width:100%;font:inherit;font-size:16px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:light-dark(#f6f8f9,#1b1f22);color:var(--ink)}
+input:focus,select:focus,button:focus-visible{outline:3px solid #4a90d9;outline-offset:1px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;min-height:44px;font:inherit;font-size:15px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--ink);padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--acc);color:var(--panel);border-color:var(--acc)}
+.hint{font-size:13px;color:var(--mut);margin:8px 0 0}
+.hide{display:none!important}
+/* resultat */
+.verdict{border-radius:14px;padding:18px;color:#fff;background:#3b4248;margin-bottom:12px}
+.verdict.ok{background:var(--ok)}.verdict.bad{background:var(--red)}
+.verdict b{display:block;font-size:clamp(34px,7vw,48px);line-height:1.05}
+.verdict span{font-size:15px;opacity:.95}
+.lamp{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.lamp:first-child{border-top:0}
+.dot{flex:none;width:22px;height:22px;border-radius:50%;margin-top:3px;background:#888;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.dot.ok{background:var(--ok)}.dot.bad{background:var(--red)}
+.lamp h3{margin:0;font-size:16px}
+.lamp p{margin:2px 0 0;font-size:15px;font-variant-numeric:tabular-nums}
+.meter{margin-top:8px}
+.bar{height:12px;border-radius:6px;background:light-dark(#e3e8ec,#2e3439);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:var(--acc)}
+.bar.bad i{background:var(--red)}
+.ml{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+td{padding:6px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;white-space:nowrap}
+.warn{background:light-dark(#fff1f0,#3a1d1b);border:1px solid var(--red);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:10px}
+.sug{font-size:15px;margin-top:10px}
+details{font-size:15px}details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+details li{margin-bottom:6px}
+.foot{font-size:13px;color:var(--mut);max-width:1240px;margin:0 auto;padding:0 max(4vw,16px) 40px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px max(4vw,16px) 0;max-width:1240px;margin:0 auto}
+.tabs button{flex:none;min-height:44px;font:inherit;font-size:15px;font-weight:600;border:1px solid var(--line);border-radius:22px;background:var(--panel);color:var(--ink);padding:6px 16px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--acc);color:var(--panel);border-color:var(--acc)}
+.panel{max-width:1240px;margin:0 auto;padding:14px max(4vw,16px) 40px}
+.panel .card{max-width:720px}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.tog input{width:52px;height:30px;min-height:0;accent-color:var(--ok)}
+.reset{background:transparent;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:15px;border-radius:9px;min-height:44px;padding:6px 14px;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+<h1>Kurskontroll</h1>
+<p>Kalkulator for kursberegning etter NEK 400. Fungerer offline.</p>
+</header>
+<nav class="tabs" role="tablist" id="tabs">
+  <button type="button" role="tab" data-tab="krav" aria-selected="true">Krav 1 og 2</button>
+  <button type="button" role="tab" data-tab="spenningsfall" aria-selected="false">Spenningsfall</button>
+  <button type="button" role="tab" data-tab="kortslutning" aria-selected="false">Kortslutning</button>
+  <button type="button" role="tab" data-tab="innstillinger" aria-selected="false">Innstillinger</button>
+</nav>
+
+<main class="wrap" id="tab-krav" data-panel="krav">
+
+
+<section class="form">
+  <div class="card">
+    <h2>Regelverk</h2>
+    <div class="seg" id="rule">
+      <button type="button" data-v="bolig" aria-pressed="true">Bolig (823)</button>
+      <button type="button" data-v="gen" aria-pressed="false">Generelt (433.1)</button>
+    </div>
+    <p class="hint" id="rulehint"></p>
+  </div>
+
+  <div class="card">
+    <h2>Belastning I<sub>B</sub></h2>
+    <div class="seg" id="ibmode">
+      <button type="button" data-v="a" aria-pressed="true">Skriv inn strøm</button>
+      <button type="button" data-v="p" aria-pressed="false">Regn fra effekt</button>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div id="ibA"><label for="ib">I<sub>B</sub> (A)</label><input id="ib" type="number" inputmode="decimal" step="0.1" min="0" value="10"></div>
+      <div class="pf hide"><label for="p">Effekt P (W)</label><input id="p" type="number" inputmode="decimal" min="0" value="2000"></div>
+      <div class="pf hide"><label for="sys">System</label><select id="sys">
+        <option value="1-230">1-fas 230 V</option><option value="3-230">3-fas 230 V (IT)</option><option value="3-400">3-fas 400 V (TN)</option></select></div>
+      <div class="pf hide"><label for="cos">cos φ</label><input id="cos" type="number" inputmode="decimal" step="0.01" min="0.1" max="1" value="1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Vern</h2>
+    <div class="grid">
+      <div class="wide"><label for="dev">Type vern</label><select id="dev">
+        <option value="mcb">Automat / JFA B, C, D (I2 = 1,45·In)</option>
+        <option value="bk">Bolig-karakteristikk Bk/Ck (I2 = 1,2·In)</option>
+        <option value="k13">Vern med I2 = 1,3·In</option>
+        <option value="gg">Smeltesikring gG</option>
+        <option value="eff">Effektbryter (I2 = 1,3·Ir)</option>
+        <option value="cus">Egen I2-faktor (datablad)</option></select></div>
+      <div><label for="inn">Merkestrøm In (A)</label><input id="inn" type="number" inputmode="decimal" list="instd" min="0" value="16">
+        <datalist id="instd"></datalist></div>
+      <div id="cusw" class="hide"><label for="cus">I2-faktor (k)</label><input id="cus" type="number" inputmode="decimal" step="0.01" min="1" value="1.45"></div>
+    </div>
+    <p class="hint">I2 = strømmen som garantert gir utkobling innen avtalt tid. Sjekk databladet – mange bolig-JFA har I2 = 1,2 eller 1,3·In.</p>
+  </div>
+
+  <div class="card">
+    <h2>Kabel</h2>
+    <div class="grid">
+      <div id="matw" class="hide"><label for="mat">Ledermateriale</label><select id="mat"><option value="cu">Kobber (Cu)</option><option value="al">Aluminium (Al)</option></select></div>
+      <div><label for="ins">Isolasjon</label><select id="ins"><option value="pvc">PVC 70 °C (PN, PR, PFSP)</option><option value="pex">PEX 90 °C (PFXP, TFXP)</option></select></div>
+      <div><label for="mm">Tverrsnitt (mm²)</label><select id="mm"></select></div>
+      <div><label for="nl">Belastede ledere</label><select id="nl"><option value="2">2 (1-fas)</option><option value="3">3 (3-fas)</option></select></div>
+      <div class="wide"><label for="met">Referanseinstallasjonsmetode</label><select id="met">
+        <option value="A1">A1 – ledere i rør / kabel i isolert vegg</option>
+        <option value="A2">A2 – flerlederkabel i rør i isolert vegg</option>
+        <option value="B1">B1 – ledere i rør på/i murvegg</option>
+        <option value="B2">B2 – flerlederkabel i rør på/i murvegg</option>
+        <option value="C" selected>C – kabel åpent på vegg/tak</option>
+        <option value="E">E – flerlederkabel fritt i luft / perforert bane</option>
+        <option value="D1">D1 – kabel i rør i jord</option>
+        <option value="D2">D2 – kabel direkte i jord</option></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Korreksjonsfaktorer</h2>
+    <div class="grid">
+      <div><label for="temp" id="templ">Omgivelsestemperatur luft (°C)</label><input id="temp" type="number" inputmode="decimal" step="1" value="30"></div>
+      <div class="wide"><label for="grp">Samlet forlegning</label><select id="grp">
+        <option value="bunt">Bunt / i rør / innstøpt</option>
+        <option value="vegg">Ett lag på vegg/gulv</option>
+        <option value="tak">Ett lag rett under tretak</option>
+        <option value="perf">Ett lag på perforert bane</option>
+        <option value="stige">Ett lag på kabelstige</option></select></div>
+      <div><label for="n">Antall kurser samlet</label><input id="n" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
+      <div><label for="iso">Helt omsluttet av varmeisolasjon</label><select id="iso">
+        <option value="0">Nei</option><option value="50">50 mm</option><option value="100">100 mm</option><option value="200">200 mm</option><option value="400">400 mm</option><option value="500">≥ 500 mm</option></select></div>
+      <div><label for="kx">Ekstra faktor (valgfri)</label><input id="kx" type="number" inputmode="decimal" step="0.01" min="0" max="2" value="1"></div>
+    </div>
+    <p class="hint">Referanse: 30 °C luft, 20 °C jord. «Helt omsluttet» bruker metode C × faktor (IEC 60364-5-52) og overstyrer valgt metode.</p>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Slik regnes det</summary>
+      <ul>
+        <li><b>Generelt, NEK 400-4-43 avsnitt 433.1:</b> Krav 1: I<sub>B</sub> ≤ I<sub>n</sub> ≤ I<sub>z</sub>. Krav 2: I<sub>2</sub> ≤ 1,45·I<sub>z</sub>.</li>
+        <li><b>Bolig, NEK 400-8-823 avsnitt 823.433.1</b> (Cu 1,5–4 mm²): Krav 1: I<sub>B</sub> ≤ I<sub>n</sub>. Krav 2: I<sub>2</sub> ≤ I<sub>z</sub> (ingen 1,45-margin). Over 4 mm² brukes de generelle kravene.</li>
+        <li>I<sub>z</sub> = tabellverdi (NEK 400-5-52, tabell 52B) × k<sub>temp</sub> × k<sub>samlet</sub> × k<sub>isolasjon</sub> × ekstra faktor.</li>
+        <li>Aluminium følger alltid de generelle kravene (433.1).</li>
+        <li>gG-sikring: I<sub>2</sub> = 2,1·In (≤ 4 A), 1,9·In (4–16 A), 1,6·In (≥ 16 A).</li>
+        <li>Antall kurser mellom tabellverdier rundes opp (strengeste faktor).</li>
+      </ul>
+    </details>
+  </div>
+  <button class="reset" id="reset" type="button">Nullstill</button>
+</section>
+<section class="res" id="resultat" aria-live="polite">
+  <div id="verdict" class="verdict"><b>–</b><span>Fyll inn verdier</span></div>
+  <div class="card">
+    <div class="lamp"><div id="d1" class="dot"></div><div><h3 id="k1t">Krav 1</h3><p id="k1"></p></div></div>
+    <div class="lamp"><div id="d2" class="dot"></div><div style="flex:1"><h3 id="k2t">Krav 2</h3><p id="k2"></p>
+      <div class="meter"><div class="ml"><span>I2 mot grense</span><span id="mtxt"></span></div><div id="mbar" class="bar"><i id="mfill"></i></div></div></div></div>
+    <div id="sug" class="sug"></div>
+    <div id="warn"></div>
+  </div>
+  <div class="card">
+    <h2>Mellomregning</h2>
+    <table><tbody id="calc"></tbody></table>
+  </div>
+</section>
+</main>
+<section class="panel hide" data-panel="spenningsfall"><div class="card"><h2>Spenningsfall</h2><p>Kommer i neste versjon.</p></div></section>
+<section class="panel hide" data-panel="kortslutning"><div class="card"><h2>Kortslutning</h2><p>Kommer i neste versjon.</p></div></section>
+<section class="panel hide" data-panel="innstillinger">
+  <div class="card"><h2>Innstillinger</h2>
+    <label class="tog" for="setAl"><span style="font-size:16px;color:var(--ink)">Vis aluminiumsledere</span><input type="checkbox" id="setAl"></label>
+    <p class="hint">Når denne er på, kan du velge Cu eller Al under «Kabel». Aluminium følger alltid de generelle kravene i 433.1 (bolig-kravet i 823.433.1 gjelder kobber 1,5–4 mm²).</p>
+  </div>
+  <div class="card"><h2>Om appen</h2><p class="hint" style="font-size:15px">Versjon 2 · Bygger på NEK 400:2026 / 2022. Strømføringsevne fra IEC 60364-5-52 tabell B.52.2–B.52.5 og B.52.10–B.52.13, som NEK 400-5-52 bygger på. Innstillinger og siste verdier lagres på denne enheten.</p></div>
+</section>
+<a class="mini" id="mini" href="#resultat"><b id="minib">–</b><span id="minis"></span></a>
+<p class="foot">Hjelpeverktøy – ikke en erstatning for NEK 400. Tabellverdier er hentet fra IEC 60364-5-52 tillegg B, som NEK 400-5-52 bygger på; kontroller mot din utgave av NEK 400 og produsentens datablad før dokumentasjon. Spenningsfall og kortslutning er ikke med ennå.</p>
+
+<script>
+{
+const SZ={cu:[1.5,2.5,4,6,10,16,25,35,50,70,95,120],al:[2.5,4,6,10,16,25,35,50,70,95,120]};
+const T={cu:{
+pvc2:{A1:[14.5,19.5,26,34,46,61,80,99,119,151,182,210],A2:[14,18.5,25,32,43,57,75,92,110,139,167,192],B1:[17.5,24,32,41,57,76,101,125,151,192,232,269],B2:[16.5,23,30,38,52,69,90,111,133,168,201,232],C:[19.5,27,36,46,63,85,112,138,168,213,258,299],D1:[22,29,37,46,60,78,99,119,140,173,204,231],D2:[22,28,38,48,64,83,110,132,156,192,230,261],E:[22,30,40,51,70,94,119,148,180,232,282,328]},
+pvc3:{A1:[13.5,18,24,31,42,56,73,89,108,136,164,188],A2:[13,17.5,23,29,39,52,68,83,99,125,150,172],B1:[15.5,21,28,36,50,68,89,110,134,171,207,239],B2:[15,20,27,34,46,62,80,99,118,149,179,206],C:[17.5,24,32,41,57,76,96,119,144,184,223,259],D1:[18,24,30,38,50,64,82,98,116,143,169,192],D2:[19,24,33,41,54,70,92,110,130,162,193,220],E:[18.5,25,34,43,60,80,101,126,153,196,238,276]},
+pex2:{A1:[19,26,35,45,61,81,106,131,158,200,241,278],A2:[18.5,25,33,42,57,76,99,121,145,183,220,253],B1:[23,31,42,54,75,100,133,164,198,253,306,354],B2:[22,30,40,51,69,91,119,146,175,221,265,305],C:[24,33,45,58,80,107,138,171,209,269,328,382],D1:[25,33,43,53,71,91,116,139,164,203,239,271],D2:[27,35,46,58,77,100,129,155,183,225,270,306],E:[26,36,49,63,86,115,149,185,225,289,352,410]},
+pex3:{A1:[17,23,31,40,54,73,95,117,141,179,216,249],A2:[16.5,22,30,38,51,68,89,109,130,164,197,227],B1:[20,28,37,48,66,88,117,144,175,222,269,312],B2:[19.5,26,35,44,60,80,105,128,154,194,233,268],C:[22,30,40,52,71,96,119,147,179,229,278,322],D1:[21,28,36,44,58,75,96,115,135,167,197,223],D2:[23,30,39,49,65,84,107,129,153,188,226,257],E:[23,32,42,54,75,100,127,158,192,246,298,346]}},
+al:{
+pvc2:{A1:[15,20,26,36,48,63,77,93,118,142,164],A2:[14.5,19.5,25,33,44,58,71,86,108,130,150],B1:[18.5,25,32,44,60,79,97,118,150,181,210],B2:[17.5,24,30,41,54,71,86,104,131,157,181],C:[21,28,36,49,66,83,103,125,160,195,226],D1:[22,29,36,47,61,77,93,109,135,159,180],D2:[null,null,null,null,63,82,98,117,145,173,200],E:[23,31,39,54,73,89,111,135,173,210,244]},
+pvc3:{A1:[14,18.5,24,32,43,57,70,84,107,129,149],A2:[13.5,17.5,23,31,41,53,65,78,98,118,135],B1:[16.5,22,28,39,53,70,86,104,133,161,186],B2:[15.5,21,27,36,48,62,77,92,116,139,160],C:[18.5,25,32,44,59,73,90,110,140,170,197],D1:[18.5,24,30,39,50,64,77,91,112,132,150],D2:[null,null,null,null,53,69,83,99,122,148,169],E:[19.5,26,33,46,61,78,96,117,150,183,212]},
+pex2:{A1:[20,27,35,48,64,84,103,125,158,191,220],A2:[19.5,26,33,45,60,78,96,115,145,175,201],B1:[25,33,43,59,79,105,130,157,200,242,281],B2:[23,31,40,54,72,94,115,138,175,210,242],C:[26,35,45,62,84,101,126,154,198,241,280],D1:[26,33,42,55,71,90,108,128,158,186,211],D2:[null,null,null,null,76,98,117,139,170,204,233],E:[28,38,49,67,91,108,135,164,211,257,300]},
+pex3:{A1:[19,25,32,44,58,76,94,113,142,171,197],A2:[18,24,31,41,55,71,87,104,131,157,180],B1:[22,29,38,52,71,93,116,140,179,217,251],B2:[21,28,35,48,64,84,103,124,156,188,216],C:[24,32,41,57,76,90,112,136,174,211,245],D1:[22,28,35,46,59,75,90,106,130,154,174],D2:[null,null,null,null,64,82,98,117,144,172,197],E:[24,32,42,58,77,97,120,146,187,227,263]}}};
+const TA=[10,15,20,25,30,35,40,45,50,55,60,65,70];
+const KA={pvc:[1.22,1.17,1.12,1.06,1,.94,.87,.79,.71,.61,.5,null,null],pex:[1.15,1.12,1.08,1.04,1,.96,.91,.87,.82,.76,.71,.65,.58]};
+const TG=[10,15,20,25,30,35,40,45,50];
+const KG={pvc:[1.1,1.05,1,.95,.89,.84,.77,.71,.63],pex:[1.07,1.04,1,.96,.93,.89,.85,.8,.76]};
+const GN=[1,2,3,4,5,6,7,8,9,12,16,20];
+const G={bunt:[1,.8,.7,.65,.6,.57,.54,.52,.5,.45,.41,.38],vegg:[1,.85,.79,.75,.73,.72,.72,.71,.7,.7,.7,.7],tak:[.95,.81,.72,.68,.66,.64,.63,.62,.61,.61,.61,.61],perf:[1,.88,.82,.77,.75,.73,.73,.72,.72,.72,.72,.72],stige:[1,.87,.82,.8,.8,.79,.79,.78,.78,.78,.78,.78]};
+const ISO={0:1,50:.88,100:.78,200:.63,400:.51,500:.5};
+const INSTD=[6,10,13,15,16,20,25,32,40,50,63,80,100,125,160,200,250];
+const $=id=>document.getElementById(id);
+const f=(x,d=1)=>Number.isFinite(x)?x.toLocaleString('no-NO',{minimumFractionDigits:0,maximumFractionDigits:d}):'–';
+function fillSizes(){const m=$('mat').value,cur=parseFloat($('mm').value)||2.5,list=SZ[m];const v=(m==='al'&&cur<16)?16:list.includes(cur)?cur:2.5;$('mm').innerHTML=list.map(x=>`<option value="${x}"${x===v?' selected':''}>${String(x).replace('.',',')}</option>`).join('')}
+fillSizes();
+$('instd').innerHTML=INSTD.map(v=>`<option value="${v}">`).join('');
+const st={rule:'bolig',ibmode:'a'};
+const segs=['rule','ibmode'];
+const fields=['mat','ib','p','sys','cos','dev','inn','cus','ins','mm','nl','met','temp','grp','n','iso','kx'];
+const defaults={};fields.forEach(k=>defaults[k]=$(k).value);
+function interp(xs,ys,x){
+  if(x<xs[0])return null;
+  for(let i=0;i<xs.length-1;i++){if(x>=xs[i]&&x<=xs[i+1]){const a=ys[i],b=ys[i+1];if(a==null||b==null)return x===xs[i]?a:null;return a+(b-a)*(x-xs[i])/(xs[i+1]-xs[i])}}
+  return x===xs[xs.length-1]?ys[ys.length-1]:null}
+function k2of(dev,In){
+  if(dev==='mcb')return 1.45;if(dev==='bk')return 1.2;if(dev==='k13'||dev==='eff')return 1.3;
+  if(dev==='gg')return In<=4?2.1:In<16?1.9:1.6;
+  return parseFloat($('cus').value)||NaN}
+function setSeg(name,v){st[name]=v;$(name).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
+function save(){try{const o={st,al:$('setAl').checked};fields.forEach(k=>o[k]=$(k).value);localStorage.setItem('kurskontroll',JSON.stringify(o))}catch(e){}}
+function load(){try{const o=JSON.parse(localStorage.getItem('kurskontroll')||'null');if(!o)return;$('setAl').checked=!!o.al;if(o.mat)$('mat').value=o.mat;fillSizes();fields.forEach(k=>{if(o[k]!=null)$(k).value=o[k]});segs.forEach(s=>o.st&&o.st[s]&&setSeg(s,o.st[s]))}catch(e){}}
+function check(rule,mm,IB,In,Iz,I2,mat){
+  const bol=rule==='bolig'&&mat==='cu'&&mm<=4;
+  const k1=bol?IB<=In:(IB<=In&&In<=Iz);
+  const lim=bol?Iz:1.45*Iz;
+  return{bol,k1,k2:I2<=lim+1e-9,lim}}
+function calc(){
+  const alOn=$('setAl').checked;if(!alOn&&$('mat').value!=='cu'){$('mat').value='cu';fillSizes()}
+  $('matw').classList.toggle('hide',!alOn);
+  const mat=$('mat').value;
+  const rule=st.rule,dev=$('dev').value,ins=$('ins').value,mm=parseFloat($('mm').value),nl=$('nl').value,met=$('met').value;
+  $('cusw').classList.toggle('hide',dev!=='cus');
+  document.querySelectorAll('.pf').forEach(e=>e.classList.toggle('hide',st.ibmode!=='p'));
+  $('ibA').classList.toggle('hide',st.ibmode!=='a');
+  const ground=met[0]==='D';
+  $('templ').textContent=ground?'Jordtemperatur (°C)':'Omgivelsestemperatur luft (°C)';
+  $('rulehint').textContent=rule==='bolig'?'For kobber 1,5–4 mm² i bolig: Krav 1 IB ≤ In, Krav 2 I2 ≤ Iz. Større tverrsnitt følger 433.1.':'Krav 1: IB ≤ In ≤ Iz. Krav 2: I2 ≤ 1,45·Iz.';
+  const warns=[];
+  let IB;
+  if(st.ibmode==='a')IB=parseFloat($('ib').value);
+  else{const P=parseFloat($('p').value),c=parseFloat($('cos').value),[ph,U]=$('sys').value.split('-').map(Number);IB=ph===1?P/(U*c):P/(Math.sqrt(3)*U*c)}
+  const In=parseFloat($('inn').value);
+  const iso=+$('iso').value;
+  const idx=SZ[mat].indexOf(mm);
+  const tab=T[mat][ins+nl];
+  const baseMet=iso?'C':met;
+  const Iz0=tab[baseMet][idx]??NaN;
+  if(!Number.isFinite(Iz0))warns.push('Ingen tabellverdi for denne kombinasjonen (D2 aluminium finnes fra 16 mm²).');
+  if(mat==='al'&&mm<16)warns.push('Aluminium under 16 mm² er uvanlig i faste installasjoner – sjekk minstetverrsnitt i NEK 400-5-52.');
+  const tIn=parseFloat($('temp').value);
+  const kt=ground?interp(TG,KG[ins],tIn):interp(TA,KA[ins],tIn);
+  if(kt==null)warns.push('Temperaturen er utenfor tabellområdet for valgt isolasjon.');
+  let n=Math.max(1,Math.round(parseFloat($('n').value)||1));
+  let gi=GN.findIndex(x=>x>=n);if(gi<0)gi=GN.length-1;
+  let kg=G[$('grp').value][gi];
+  if(ground&&n>1){warns.push('Samlet forlegning i jord har egne faktorer (tabell 52B.18/19). Legg inn den som ekstra faktor; samlefaktor er satt til 1.');kg=1}
+  if(n>20)warns.push('Over 20 kurser: tabellen slutter ved 20, verdien for 20 er brukt.');
+  const ki=ISO[iso];
+  if(iso&&mm>10)warns.push('Faktoren for kabel helt omsluttet av isolasjon gjelder tverrsnitt opp til 10 mm².');
+  const kx=parseFloat($('kx').value)||1;
+  const Iz=Iz0*(kt??NaN)*kg*ki*kx;
+  const k=k2of(dev,In);const I2=k*In;
+  if(rule==='bolig'&&mat==='al')warns.push('Aluminium: generelle krav (433.1) brukes også i bolig.');
+  if(rule==='bolig'&&mat==='cu'&&mm>4)warns.push('Tverrsnitt over 4 mm²: generelle krav (433.1) brukes også i bolig.');
+  if(nl==='2'&&st.ibmode==='p'&&$('sys').value!=='1-230')warns.push('Trefase-last med 2 belastede ledere valgt – vanligvis skal det være 3.');
+  const ok=[IB,In,Iz,I2].every(Number.isFinite)&&IB>=0&&In>0;
+  const r=ok?check(rule,mm,IB,In,Iz,I2,mat):null;
+  // lamper
+  const set=(d,good)=>{$(d).className='dot '+(good==null?'':good?'ok':'bad')};
+  if(!ok){set('d1');set('d2');$('verdict').className='verdict';$('verdict').innerHTML='<b>–</b><span>Sjekk inndata</span>';$('k1').textContent='';$('k2').textContent=''}
+  else{
+    set('d1',r.k1);set('d2',r.k2);
+    $('k1t').textContent='Krav 1 '+(r.k1?'OK':'IKKE OK');
+    $('k2t').textContent='Krav 2 '+(r.k2?'OK':'IKKE OK');
+    $('k1').textContent=r.bol?`IB ${f(IB,2)} A ≤ In ${f(In)} A`:`IB ${f(IB,2)} A ≤ In ${f(In)} A ≤ Iz ${f(Iz)} A`;
+    $('k2').textContent=r.bol?`I2 ${f(I2)} A ≤ Iz ${f(Iz)} A`:`I2 ${f(I2)} A ≤ 1,45·Iz = ${f(r.lim)} A`;
+    const all=r.k1&&r.k2;
+    $('verdict').className='verdict '+(all?'ok':'bad');
+    $('verdict').innerHTML=`<b>${all?'OK':'IKKE OK'}</b><span>${r.bol?'Bolig, NEK 400-8-823 (823.433.1)':'NEK 400-4-43 (433.1)'} · ${String(mm).replace('.',',')} mm² ${mat==='al'?'Al ':''}${ins.toUpperCase()} · ${baseMet}</span>`;
+    const pct=Math.min(I2/r.lim,1.5);
+    $('mfill').style.width=Math.min(pct/1.5*100,100)+'%';
+    $('mbar').className='bar'+(r.k2?'':' bad');
+    $('mini').className='mini '+(all?'ok':'bad');$('minib').textContent=all?'OK':'IKKE OK';$('minis').textContent=`K1 ${r.k1?'OK':'feil'} · K2 ${r.k2?'OK':'feil'} · Iz ${f(Iz)} A · I2 ${f(I2)} A`;
+    $('mtxt').textContent=f(I2/r.lim*100,0)+' %';
+    // forslag
+    const pass=INSTD.filter(v=>{const c=check(rule,mm,IB,v,Iz,k2of(dev,v)*v,mat);return c.k1&&c.k2});
+    const maxIn=INSTD.filter(v=>{const c=check(rule,mm,0,v,Iz,k2of(dev,v)*v,mat);return c.k1&&c.k2}).pop();
+    let s=maxIn?`Største standardvern med denne kabelen og vern-typen: <b>${maxIn} A</b>.`:'Ingen standard vernstørrelse oppfyller kravene med denne kabelen.';
+    if(maxIn&&IB>maxIn)s+=' I<sub>B</sub> er større enn dette – velg større tverrsnitt, annen forlegning eller vern med lavere I2.';
+    else if(!all&&pass.length)s+=` Med I<sub>B</sub> = ${f(IB,2)} A består: ${pass.join(', ')} A.`;
+    $('sug').innerHTML=s}
+  $('warn').innerHTML=warns.map(w=>`<div class="warn">${w}</div>`).join('');
+  const rows=[
+    ['IB (belastning)',f(IB,2)+' A'],
+    ['In (vern)',f(In)+' A'],
+    ['I2-faktor',f(k,2)],
+    ['I2 = k·In',f(I2,2)+' A'],
+    [`Iz tabell (${baseMet}, ${nl} ledere)`,f(Iz0)+' A'],
+    [ground?'k temp. jord':'k temp. luft',f(kt,3)],
+    [`k samlet (${n} kurs${n>1?'er':''})`,f(kg,2)],
+    ['k varmeisolasjon',f(ki,2)],
+    ['Ekstra faktor',f(kx,2)],
+    ['Iz korrigert',f(Iz,2)+' A']];
+  $('calc').innerHTML=rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+  save()}
+segs.forEach(s=>$(s).addEventListener('click',e=>{const b=e.target.closest('button');if(b){setSeg(s,b.dataset.v);calc()}}));
+fields.forEach(k=>{$(k).addEventListener('input',calc);$(k).addEventListener('change',calc)});
+$('mat').addEventListener('change',()=>{fillSizes();calc()});
+$('setAl').addEventListener('change',calc);
+function showTab(t){if(!document.querySelector(`[data-panel="${t}"]`))t='krav';document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hide',p.dataset.panel!==t));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('mini').style.visibility=t==='krav'?'visible':'hidden'}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b){history.replaceState(null,'','#'+b.dataset.tab);showTab(b.dataset.tab)}});
+window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
+$('sys').addEventListener('change',()=>{$('nl').value=$('sys').value==='1-230'?'2':'3';calc()});
+$('reset').addEventListener('click',()=>{fields.forEach(k=>$(k).value=defaults[k]);setSeg('rule','bolig');setSeg('ibmode','a');fillSizes();calc()});
+$('mini').addEventListener('click',e=>{e.preventDefault();$('resultat').scrollIntoView({behavior:'smooth'})});
+load();calc();showTab(location.hash.slice(1)||'krav');
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
+}
+</script>
+</body>
+</html>
