@@ -293,6 +293,7 @@ function calc(){
   if(rule==='bolig'&&mat==='cu'&&mm>4)warns.push('Tverrsnitt over 4 mm²: generelle krav (433.1) brukes også i bolig.');
   if(nl==='2'&&st.ibmode==='p'&&$('sys').value!=='1-230')warns.push('Trefase-last med 2 belastede ledere valgt – vanligvis skal det være 3.');
   const ok=[IB,In,Iz,I2].every(Number.isFinite)&&IB>=0&&In>0;
+  if(ok&&IB>In)warns.unshift(`I<sub>B</sub> (${f(IB,2)} A) er høyere enn merkestrømmen In (${f(In)} A). Det er aldri tillatt – velg vern med In ≥ I<sub>B</sub>, og kontroller kabelen på nytt.`);
   const r=ok?check(rule,mm,IB,In,Iz,I2,mat):null;
   // lamper
   const set=(d,good)=>{$(d).className='dot '+(good==null?'':good?'ok':'bad')};
