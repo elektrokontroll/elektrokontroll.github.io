@@ -232,48 +232,42 @@ details li{margin-bottom:6px}
 
 <main class="wrap hide" data-panel="kortslutning">
 <section class="form">
-  <div class="card"><h2>Nett</h2>
-    <button type="button" class="reset" id="ks_hent" style="margin-bottom:12px">Hent verdier fra Krav 1 og 2</button>
-    <div class="grid">
-      <div class="wide"><label for="ks_sys">System</label><select id="ks_sys"><option value="it">IT 230 V (minste: 2-polet Ik2p)</option><option value="tn">TN 230/400 V (minste: 1-polet Ik1p)</option></select></div>
-      <div><label for="ks_min" id="ks_minl">Ik2p min ved fordeling (kA)</label><input id="ks_min" type="number" inputmode="decimal" step="0.01" min="0" value="1"></div>
-      <div><label for="ks_max">Ik3p maks ved fordeling (kA)</label><input id="ks_max" type="number" inputmode="decimal" step="0.01" min="0" value="3"></div>
+  <div class="card"><h2>Målt kortslutningsstrøm</h2>
+    <div class="seg" id="ks_seg"><button type="button" data-v="it" aria-pressed="true">Ik2p (IT)</button><button type="button" data-v="tn" aria-pressed="false">Ik1p (TN)</button></div>
+    <div class="grid" style="margin-top:12px">
+      <div class="wide"><label for="ks_min" id="ks_minl">Målt Ik2p min på kursen (A)</label><input id="ks_min" type="number" inputmode="decimal" step="1" min="0" value="600"></div>
     </div>
-    <p class="hint">Verdier fra netteier eller fra beregning/måling i fordelingen kursen går ut fra.</p></div>
-  <div class="card"><h2>Kabel</h2>
-    <div class="grid">
-      <div class="matw hide"><label for="ks_mat">Ledermateriale</label><select id="ks_mat" class="matsel"><option value="cu">Kobber (Cu)</option><option value="al">Aluminium (Al)</option></select></div>
-      <div><label for="ks_ins">Isolasjon</label><select id="ks_ins"><option value="pvc">PVC 70 °C</option><option value="pex">PEX 90 °C</option></select></div>
-      <div><label for="ks_mm">Tverrsnitt fase (mm²)</label><select id="ks_mm"></select></div>
-      <div id="ks_pew"><label for="ks_pe">Tverrsnitt PE (mm²)</label><select id="ks_pe"></select></div>
-      <div><label for="ks_l">Kabellengde (m)</label><input id="ks_l" type="number" inputmode="decimal" step="1" min="0" value="25"></div>
-    </div></div>
+    <p class="hint">Mål der kursen er lengst fra fordelingen (f.eks. siste stikkontakt).</p></div>
   <div class="card"><h2>Vern</h2>
+    <button type="button" class="reset" id="ks_hent" style="margin-bottom:12px">Hent vern fra Krav 1 og 2</button>
     <div class="grid">
-      <div class="wide"><label for="ks_dev">Utløsekarakteristikk</label><select id="ks_dev">
-        <option value="5">B / Bk (momentan ved 5 × In)</option><option value="10" selected>C / Ck (momentan ved 10 × In)</option><option value="20">D (momentan ved 20 × In)</option><option value="ia">Smeltesikring / effektbryter / annet (oppgi Ia)</option></select></div>
-      <div><label for="ks_in">Merkestrøm In (A)</label><input id="ks_in" type="number" inputmode="decimal" list="instd" min="0" value="16"></div>
+      <div><label for="ks_dev">Karakteristikk</label><select id="ks_dev">
+        <option value="5">B / Bk</option><option value="10" selected>C / Ck</option><option value="20">D</option><option value="ia">Annet (oppgi Ia)</option></select></div>
+      <div><label for="ks_in">In (A)</label><input id="ks_in" type="number" inputmode="decimal" list="instd" min="0" value="16"></div>
       <div class="ksia hide"><label for="ks_ia">Utløsestrøm Ia (A)</label><input id="ks_ia" type="number" inputmode="decimal" min="0" value="100"></div>
       <div class="ksia hide"><label for="ks_t">Utløsetid ved Ia (s)</label><input id="ks_t" type="number" inputmode="decimal" step="0.01" min="0" value="0.4"></div>
-      <div class="wide"><label for="ks_i2t">Vernets I²t ved Ik maks (A²s, datablad – valgfri)</label><input id="ks_i2t" type="number" inputmode="decimal" min="0" placeholder="f.eks. 20000"></div>
     </div>
-    <label class="tog" for="ks_stikk" style="margin-top:10px"><span style="font-size:15px">Stikkontaktkurs: krev 20 % margin på Ia</span><input type="checkbox" id="ks_stikk"></label>
+    <label class="tog" for="ks_stikk" style="margin-top:10px"><span style="font-size:15px">Stikkontaktkurs (+20 % margin)</span><input type="checkbox" id="ks_stikk"></label>
   </div>
-  <div class="card"><details><summary>Slik regnes det</summary><ul>
-    <li>Ytre impedans finnes fra Ik min ved fordelingen. Kabelens resistans tas ved driftstemperatur (× 1,2 PVC, × 1,28 PEX), spenningsfaktor c = 0,95.</li>
-    <li>IT: Ik2p,min = c·230 / (2·(Z<sub>ytre</sub> + Z<sub>fase</sub>)). TN: Ik1p,min = c·230 / (Z<sub>sløyfe</sub> + Z<sub>fase</sub> + Z<sub>PE</sub>).</li>
-    <li>Utkobling: Ik,min i kursens ende ≥ Ia (B 5·In, C 10·In, D 20·In).</li>
-    <li>Kabelens tåleevne: t ≤ k²S²/I². k: Cu/PVC 115, Cu/PEX 143, Al/PVC 76, Al/PEX 94 (NEK 400-4-43, 434.5.2).</li>
-    <li>Impedansene summeres som absoluttverdier – litt konservativt. Kontroller alltid med måling.</li></ul></details></div>
+  <div class="card"><details id="ks_more"><summary>Flere kontroller (valgfritt)</summary>
+    <div class="grid" style="margin-top:8px">
+      <div class="wide"><label for="ks_kor">Korreksjon for varm leder</label><select id="ks_kor"><option value="1">Ingen – bruk målt verdi</option><option value="1.2">÷ 1,2 (leder ved 70 °C)</option><option value="1.5">÷ 1,5 (2/3-regelen)</option></select></div>
+      <div class="matw hide"><label for="ks_mat">Ledermateriale</label><select id="ks_mat" class="matsel"><option value="cu">Kobber (Cu)</option><option value="al">Aluminium (Al)</option></select></div>
+      <div><label for="ks_ins">Isolasjon</label><select id="ks_ins"><option value="pvc">PVC</option><option value="pex">PEX</option></select></div>
+      <div><label for="ks_mm">Tverrsnitt (mm²)</label><select id="ks_mm"></select></div>
+      <div><label for="ks_max">Ik maks (A)</label><input id="ks_max" type="number" inputmode="decimal" min="0" placeholder="valgfri"></div>
+      <div><label for="ks_i2t">Vernets I²t (A²s)</label><input id="ks_i2t" type="number" inputmode="decimal" min="0" placeholder="fra datablad"></div>
+    </div>
+    <p class="hint">Kabelens tåleevne: t ≤ k²S²/I² (k: Cu/PVC 115, Cu/PEX 143, Al/PVC 76, Al/PEX 94). Vernets I²t ved Ik maks skal være ≤ k²S².</p>
+  </details></div>
 </section>
 <section class="res">
   <div id="ks_v" class="verdict"><b>–</b><span></span></div>
   <div class="card">
     <div class="lamp"><div id="ks_d1" class="dot"></div><div><h3 id="ks_k1t">Utkobling</h3><p id="ks_k1"></p></div></div>
-    <div class="lamp"><div id="ks_d2" class="dot"></div><div><h3 id="ks_k2t">Kabelens tåleevne (Ik min)</h3><p id="ks_k2"></p></div></div>
-    <div class="lamp"><div id="ks_d3" class="dot"></div><div><h3 id="ks_k3t">Kabelens tåleevne (Ik maks)</h3><p id="ks_k3"></p></div></div>
+    <div class="lamp"><div id="ks_d2" class="dot"></div><div><h3 id="ks_k2t">Kabelens tåleevne</h3><p id="ks_k2"></p></div></div>
+    <div class="lamp" id="ks_l3"><div id="ks_d3" class="dot"></div><div><h3 id="ks_k3t">Tåleevne ved Ik maks</h3><p id="ks_k3"></p></div></div>
     <div id="ks_warn"></div></div>
-  <div class="card"><h2>Mellomregning</h2><table><tbody id="ks_calc"></tbody></table></div>
 </section>
 </main>
 
@@ -338,7 +332,7 @@ details li{margin-bottom:6px}
   <div class="card"><h2>Om appen</h2><p class="hint" style="font-size:15px">Versjon 3 · Bygger på NEK 400:2026 / 2022. Strømføringsevne fra IEC 60364-5-52 tabell B.52.2–B.52.5 og B.52.10–B.52.13, som NEK 400-5-52 bygger på. Innstillinger og siste verdier lagres på denne enheten.</p></div>
 </section>
 <a class="mini" id="mini" href="#resultat"><b id="minib">–</b><span id="minis"></span></a>
-<p class="foot">Hjelpeverktøy – ikke en erstatning for NEK 400. Tabellverdier er hentet fra IEC 60364-5-52 tillegg B, som NEK 400-5-52 bygger på; kontroller mot din utgave av NEK 400 og produsentens datablad før dokumentasjon. Spenningsfall og kortslutning er ikke med ennå.</p>
+<p class="foot">Hjelpeverktøy – ikke en erstatning for NEK 400. Tabellverdier er hentet fra IEC 60364-5-52 tillegg B, som NEK 400-5-52 bygger på; kontroller mot din utgave av NEK 400 og produsentens datablad før dokumentasjon. Kortslutning og kontinuitet bør alltid bekreftes med måling.</p>
 <p class="foot" style="padding-top:0">Laget av Jonas Jørgensen © 2026</p>
 
 <script>
@@ -491,11 +485,11 @@ function applyAl(){const on=$('setAl').checked;document.querySelectorAll('.matw'
 function verdict(id,ok,txt,sub){$(id).className='verdict'+(ok==null?'':ok?' ok':' bad');$(id).innerHTML=`<b>${txt}</b><span>${sub||''}</span>`}
 function rows(id,r){$(id).innerHTML=r.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}
 function warnOut(id,w){$(id).innerHTML=w.map(x=>`<div class="warn">${x}</div>`).join('')}
-const F2=['sf_sys','sf_ib','sf_l','sf_cos','sf_mat','sf_ins','sf_mm','sf_pre','sf_lim','ks_sys','ks_min','ks_max','ks_mat','ks_ins','ks_mm','ks_pe','ks_l','ks_dev','ks_in','ks_ia','ks_t','ks_i2t','cc_a','cc_len','cc_p','cc_wm2','cc_wm','cc_min','cc_maxc','cc_maxw'];
+const F2x=0;const F2=['sf_sys','sf_ib','sf_l','sf_cos','sf_mat','sf_ins','sf_mm','sf_pre','sf_lim','ks_min','ks_kor','ks_max','ks_mat','ks_ins','ks_mm','ks_dev','ks_in','ks_ia','ks_t','ks_i2t','cc_a','cc_len','cc_p','cc_wm2','cc_wm','cc_min','cc_maxc','cc_maxw'];
 let ccMode='kabel';
-function save2(){try{const o={ccMode,stikk:$('ks_stikk').checked};F2.forEach(k=>o[k]=$(k).value);localStorage.setItem('elk-faner',JSON.stringify(o))}catch(e){}}
-function load2(){try{const o=JSON.parse(localStorage.getItem('elk-faner')||'null');if(!o)return;['sf_mat','ks_mat'].forEach(k=>{if(o[k])$(k).value=o[k]});fillAll();F2.forEach(k=>{if(o[k]!=null&&$(k))$(k).value=o[k]});$('ks_stikk').checked=!!o.stikk;if(o.ccMode)ccMode=o.ccMode}catch(e){}}
-function fillAll(){fillSel('sf_mm',$('sf_mat').value,0,2.5);fillSel('ks_mm',$('ks_mat').value,0,2.5);fillSel('ks_pe',$('ks_mat').value,0,2.5)}
+function save2(){try{const o={ccMode,ksSys,stikk:$('ks_stikk').checked};F2.forEach(k=>o[k]=$(k).value);localStorage.setItem('elk-faner',JSON.stringify(o))}catch(e){}}
+function load2(){try{const o=JSON.parse(localStorage.getItem('elk-faner')||'null');if(!o)return;['sf_mat','ks_mat'].forEach(k=>{if(o[k])$(k).value=o[k]});fillAll();F2.forEach(k=>{if(o[k]!=null&&$(k))$(k).value=o[k]});$('ks_stikk').checked=!!o.stikk;if(o.ccMode)ccMode=o.ccMode;if(o.ksSys)ksSys=o.ksSys}catch(e){}}
+function fillAll(){fillSel('sf_mm',$('sf_mat').value,0,2.5);fillSel('ks_mm',$('ks_mat').value,0,2.5)}
 
 /* ---- spenningsfall ---- */
 function calcSF(){
@@ -517,52 +511,34 @@ function calcSF(){
   rows('sf_calc',[['ΔU i kursen',f(dU,2)+' V'],['Spenningsfall i kursen',f(pct,2)+' %'],['Før kursen',f(pre,2)+' %'],['Totalt',f(tot,2)+' %'],['Maks lengde for grensen',Number.isFinite(Lmax)&&Lmax>0?f(Lmax,0)+' m':'–'],['R per leder (driftstemp.)',f(R*1000,3)+' mΩ/m'],['X per leder',f(XM*1000,2)+' mΩ/m']]);
   warnOut('sf_warn',w);save2()}
 
-/* ---- kortslutning ---- */
+/* ---- kortslutning (basert på måling) ---- */
+let ksSys='it';
 function calcKS(){
-  const sys=$('ks_sys').value,mat=$('ks_mat').value,ins=$('ks_ins').value;
-  $('ks_minl').textContent=sys==='it'?'Ik2p min ved fordeling (kA)':'Ik1p min ved fordeling (kA)';
-  $('ks_pew').classList.toggle('hide',sys==='it');
-  const dev=$('ks_dev').value;document.querySelectorAll('.ksia').forEach(e=>e.classList.toggle('hide',dev!=='ia'));
-  const Ikmin0=num('ks_min')*1000,Ikmax0=num('ks_max')*1000,L=num('ks_l'),mm=parseFloat($('ks_mm').value),pe=parseFloat($('ks_pe').value),In=num('ks_in');
-  const w=[];
-  if(![Ikmin0,L,In].every(Number.isFinite)||Ikmin0<=0||L<0||In<=0){verdict('ks_v',null,'–','Sjekk inndata');return}
-  const c=0.95,U=230,kt=KT[ins];
-  const Rph=R20[mat][mm]/1000*kt*L, Rpe=R20[mat][pe]/1000*kt*L, X=XM*L;
-  let Ik,Zy,Zc;
-  if(sys==='it'){Zy=c*U/(2*Ikmin0);Zc=Math.hypot(Rph,X);Ik=c*U/(2*(Zy+Zc))}
-  else{Zy=c*U/Ikmin0;Zc=Math.hypot(Rph+Rpe,2*X);Ik=c*U/(Zy+Zc)}
-  const marg=$('ks_stikk').checked?1.2:1;
-  const Ia=(dev==='ia'?num('ks_ia'):(+dev)*In)*marg;
-  const tTrip=dev==='ia'?num('ks_t'):0.1;
+  $('ks_seg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===ksSys));
+  $('ks_minl').textContent=ksSys==='it'?'Målt Ik2p min på kursen (A)':'Målt Ik1p min på kursen (A)';
+  const mat=$('ks_mat').value,ins=$('ks_ins').value,dev=$('ks_dev').value;
+  document.querySelectorAll('.ksia').forEach(e=>e.classList.toggle('hide',dev!=='ia'));
+  const meas=num('ks_min'),kor=parseFloat($('ks_kor').value),Ikmax=num('ks_max'),mm=parseFloat($('ks_mm').value),In=num('ks_in');
+  if(![meas,In].every(Number.isFinite)||meas<=0||In<=0){verdict('ks_v',null,'–','Legg inn målt Ik og vern');warnOut('ks_warn',[]);return}
+  const Ik=meas/kor,marg=$('ks_stikk').checked?1.2:1;
+  const Ia=(dev==='ia'?num('ks_ia'):(+dev)*In)*marg, tTrip=dev==='ia'?num('ks_t'):0.1;
   const k=KK[mat][ins],k2s2=k*k*mm*mm;
-  const ok1=Ik>=Ia;
-  const tAllow=k2s2/(Ik*Ik);
-  const ok2=ok1&&tAllow>=tTrip;
-  const i2t=num('ks_i2t');
-  let ok3=null,k3txt='';
-  if(Number.isFinite(i2t)&&i2t>0){ok3=i2t<=k2s2;k3txt=`Vernets I²t ${f(i2t,0)} A²s ≤ k²S² ${f(k2s2,0)} A²s`}
-  else k3txt=`Kabelen tåler k²S² = ${f(k2s2,0)} A²s. Sammenlign med vernets I²t ved ${Number.isFinite(Ikmax0)?f(Ikmax0/1000,2)+' kA':'Ik maks'} i databladet.`;
+  const ok1=Ik>=Ia,tAllow=k2s2/(Ik*Ik),ok2=tAllow>=tTrip;
+  const i2t=num('ks_i2t');const ok3=Number.isFinite(i2t)&&i2t>0?i2t<=k2s2:null;
   const set=(d,g)=>{$(d).className='dot '+(g==null?'':g?'ok':'bad')};
-  set('ks_d1',ok1);set('ks_d2',ok2);set('ks_d3',ok3);
+  set('ks_d1',ok1);set('ks_d2',ok2);set('ks_d3',ok3);$('ks_l3').classList.toggle('hide',ok3==null);
   $('ks_k1t').textContent='Utkobling '+(ok1?'OK':'IKKE OK');
-  $('ks_k1').textContent=`Ik,min i enden ${f(Ik,0)} A ≥ Ia ${f(Ia,0)} A`;
-  $('ks_k2t').textContent='Kabelens tåleevne (Ik min) '+(ok2?'OK':'IKKE OK');
-  $('ks_k2').textContent=`Tillatt tid ${f(tAllow,3)} s ≥ utløsetid ${f(tTrip,2)} s`;
-  $('ks_k3t').textContent='Kabelens tåleevne (Ik maks)'+(ok3==null?' – kontroller':ok3?' OK':' IKKE OK');
-  $('ks_k3').textContent=k3txt;
+  $('ks_k1').textContent=`Ik ${f(Ik,0)} A ${ok1?'≥':'<'} Ia ${f(Ia,0)} A (${f(Ik/Ia,1)} ×)`;
+  $('ks_k2t').textContent='Kabelens tåleevne '+(ok2?'OK':'IKKE OK');
+  $('ks_k2').textContent=`${String(mm).replace('.',',')} mm² ${mat==='al'?'Al':'Cu'}/${ins.toUpperCase()} tåler ${f(tAllow,2)} s ${ok2?'≥':'<'} utløsetid ${f(tTrip,1)} s`;
+  if(ok3!=null){$('ks_k3t').textContent='Tåleevne ved Ik maks '+(ok3?'OK':'IKKE OK');$('ks_k3').textContent=`I²t ${f(i2t,0)} ${ok3?'≤':'>'} k²S² ${f(k2s2,0)} A²s`}
   const all=ok1&&ok2&&ok3!==false;
-  verdict('ks_v',all,all?'OK':'IKKE OK',`${sys==='it'?'Ik2p':'Ik1p'} min i kursens ende: ${f(Ik/1000,3)} kA`);
-  if(!ok1){
-    // maks lengde for utkobling
-    const per=sys==='it'?Math.hypot(R20[mat][mm]/1000*kt,XM):Math.hypot((R20[mat][mm]+R20[mat][pe])/1000*kt,2*XM);
-    const Zmax=sys==='it'?c*U/(2*Ia)-Zy:c*U/Ia-Zy;
-    w.push(Zmax>0?`Maks kabellengde for sikker utkobling: ${f(Zmax/per,0)} m. Ellers: større tverrsnitt eller vern med lavere Ia.`:'Ik min ved fordelingen er for lav for dette vernet uansett kabellengde.');}
-  if(ok3==null&&!Number.isFinite(Ikmax0))w.push('Legg inn Ik3p maks for å vurdere kabelens tåleevne ved maks kortslutning.');
-  if(Number.isFinite(Ikmax0)&&Ikmax0<Ikmin0)w.push('Ik maks er lavere enn Ik min – sjekk verdiene.');
-  if(sys==='tn'&&pe<mm)w.push('PE er mindre enn faseleder – kontroller minste PE-tverrsnitt etter NEK 400-5-54.');
-  warnOut('ks_warn',w);
-  rows('ks_calc',[['Z ytre (fra Ik min)',f(Zy*1000,1)+' mΩ'],['Z kabel '+(sys==='it'?'(per fase)':'(fase + PE)'),f(Zc*1000,1)+' mΩ'],['Temp.faktor kabel',f(kt,2)],['Ik min i kursens ende',f(Ik,0)+' A'],['Ia'+(marg>1?' (+20 %)':''),f(Ia,0)+' A'],['k ('+mat.toUpperCase()+'/'+ins.toUpperCase()+')',k],['k²S²',f(k2s2,0)+' A²s'],['Tillatt tid ved Ik min',f(tAllow,3)+' s'],['Tillatt tid ved Ik maks',Number.isFinite(Ikmax0)&&Ikmax0>0?f(k2s2/(Ikmax0*Ikmax0),4)+' s':'–']]);
-  save2()}
+  verdict('ks_v',all,all?'OK':'IKKE OK',`Vernet kobler ${ok1?'ut':'IKKE ut'} ved ${f(Ik,0)} A · Ia ${f(Ia,0)} A`);
+  const w=[];
+  if(!ok1&&dev!=='ia'){const mx=INSTD.filter(v=>Ik>=(+dev)*v*marg).pop();w.push(`Største vern som kobler ut: ${mx?mx+' A':'ingen standardstørrelse'} med denne karakteristikken. Ellers: B-karakteristikk, større tverrsnitt eller kortere kurs.`)}
+  if(!ok1&&dev==='ia')w.push('For lav kortslutningsstrøm for valgt vern.');
+  if(Number.isFinite(Ikmax)&&Ikmax<meas)w.push('Ik maks er lavere enn målt Ik min – sjekk verdiene.');
+  warnOut('ks_warn',w);save2()}
 
 /* ---- varmekabel ---- */
 function calcCC(){
@@ -589,12 +565,13 @@ function calcCC(){
 F2.forEach(k=>{const e=$(k);const fn=k.startsWith('sf')?calcSF:k.startsWith('ks')?calcKS:calcCC;e.addEventListener('input',fn);e.addEventListener('change',fn)});
 $('ks_stikk').addEventListener('change',calcKS);
 $('sf_mat').addEventListener('change',()=>{fillSel('sf_mm',$('sf_mat').value,0,2.5);calcSF()});
-$('ks_mat').addEventListener('change',()=>{fillSel('ks_mm',$('ks_mat').value,0,2.5);fillSel('ks_pe',$('ks_mat').value,0,2.5);calcKS()});
+$('ks_mat').addEventListener('change',()=>{fillSel('ks_mm',$('ks_mat').value,0,2.5);calcKS()});
+$('ks_seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ksSys=b.dataset.v;calcKS()}});
 $('cc_mode').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ccMode=b.dataset.v;calcCC()}});
 $('setAl').addEventListener('change',()=>{applyAl();calcSF();calcKS()});
 function hent(pfx){const K=window.KRAV;if(!K)return;$(pfx+'_mat').value=K.mat;fillSel(pfx+'_mm',K.mat,0,2.5);$(pfx+'_mm').value=String(K.mm);$(pfx+'_ins').value=K.ins;
   if(pfx==='sf'){if(Number.isFinite(K.IB))$('sf_ib').value=+K.IB.toFixed(2);$('sf_sys').value=$('sys').value;calcSF()}
-  else{fillSel('ks_pe',K.mat,0,2.5);$('ks_pe').value=String(K.mm);$('ks_in').value=K.In;calcKS()}}
+  else{$('ks_in').value=K.In;calcKS()}}
 $('sf_hent').addEventListener('click',()=>hent('sf'));$('ks_hent').addEventListener('click',()=>hent('ks'));
 fillAll();load2();applyAl();calcSF();calcKS();calcCC();
 
