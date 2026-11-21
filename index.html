@@ -212,12 +212,13 @@ details li{margin-bottom:6px}
       <div><label for="sf_ins">Isolasjon</label><select id="sf_ins"><option value="pvc">PVC 70 °C</option><option value="pex">PEX 90 °C</option></select></div>
       <div><label for="sf_mm">Tverrsnitt (mm²)</label><select id="sf_mm"></select></div>
     </div></div>
-  <div class="card"><h2>Grense</h2>
-    <div class="grid">
-      <div><label for="sf_pre">Spenningsfall før kursen (%)</label><input id="sf_pre" type="number" inputmode="decimal" step="0.1" min="0" value="0"></div>
-      <div><label for="sf_lim">Maks totalt (%)</label><input id="sf_lim" type="number" inputmode="decimal" step="0.1" min="0" value="4"></div>
+  <div class="card"><h2>Type kurs</h2>
+    <div class="seg" id="sf_type"><button type="button" data-v="3" aria-pressed="false">Belysning (3 %)</button><button type="button" data-v="5" aria-pressed="true">Andre kurser (5 %)</button><button type="button" data-v="egen" aria-pressed="false">Egen grense</button></div>
+    <div class="grid" style="margin-top:12px">
+      <div><label for="sf_pre">Spenningsfall fra tilknytningspunkt til kursens start (%)</label><input id="sf_pre" type="number" inputmode="decimal" step="0.1" min="0" value="0"></div>
+      <div id="sf_limw" class="hide"><label for="sf_lim">Maks totalt (%)</label><input id="sf_lim" type="number" inputmode="decimal" step="0.1" min="0" value="4"></div>
     </div>
-    <p class="hint">«Før kursen» er spenningsfallet fra inntak/fordeling frem til kursens start. Grensen settes etter prosjektets krav – sjekk NEK 400-5-52 avsnitt 525 og tillegg G.</p></div>
+    <p class="hint">Grensen gjelder fra tilknytningspunktet til allment forsyningsnett og helt ut til forbrukeren: maks 3 % for belysning og 5 % for andre forbrukerkurser.</p></div>
   <div class="card"><details><summary>Slik regnes det</summary><ul>
     <li>1-fas: ΔU = 2 · I · L · (R·cos φ + X·sin φ)</li>
     <li>3-fas: ΔU = √3 · I · L · (R·cos φ + X·sin φ)</li>
@@ -477,16 +478,17 @@ function verdict(id,ok,txt,sub){$(id).className='verdict'+(ok==null?'':ok?' ok':
 function rows(id,r){$(id).innerHTML=r.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}
 function warnOut(id,w){$(id).innerHTML=w.map(x=>`<div class="warn">${x}</div>`).join('')}
 const F2x=0;const F2=['sf_sys','sf_ib','sf_l','sf_cos','sf_mat','sf_ins','sf_mm','sf_pre','sf_lim','ks_min','ks_kor','ks_max','ks_mat','ks_ins','ks_mm','ks_dev','ks_in','ks_ia','ks_t','ks_i2t','cc_a','cc_len','cc_p','cc_wm2','cc_wm','cc_min','cc_maxc','cc_maxw'];
-let ccMode='kabel';
-function save2(){try{const o={ccMode,ksSys,stikk:$('ks_stikk').checked};F2.forEach(k=>o[k]=$(k).value);localStorage.setItem('elk-faner',JSON.stringify(o))}catch(e){}}
-function load2(){try{const o=JSON.parse(localStorage.getItem('elk-faner')||'null');if(!o)return;['sf_mat','ks_mat'].forEach(k=>{if(o[k])$(k).value=o[k]});fillAll();F2.forEach(k=>{if(o[k]!=null&&$(k))$(k).value=o[k]});$('ks_stikk').checked=!!o.stikk;if(o.ccMode)ccMode=o.ccMode;if(o.ksSys)ksSys=o.ksSys}catch(e){}}
+let ccMode='kabel',sfType='5';
+function save2(){try{const o={ccMode,ksSys,sfType,stikk:$('ks_stikk').checked};F2.forEach(k=>o[k]=$(k).value);localStorage.setItem('elk-faner',JSON.stringify(o))}catch(e){}}
+function load2(){try{const o=JSON.parse(localStorage.getItem('elk-faner')||'null');if(!o)return;['sf_mat','ks_mat'].forEach(k=>{if(o[k])$(k).value=o[k]});fillAll();F2.forEach(k=>{if(o[k]!=null&&$(k))$(k).value=o[k]});$('ks_stikk').checked=!!o.stikk;if(o.ccMode)ccMode=o.ccMode;if(o.ksSys)ksSys=o.ksSys;if(o.sfType)sfType=o.sfType}catch(e){}}
 function fillAll(){fillSel('sf_mm',$('sf_mat').value,0,2.5);fillSel('ks_mm',$('ks_mat').value,0,2.5)}
 
 /* ---- spenningsfall ---- */
 function calcSF(){
   const [ph,U]=$('sf_sys').value.split('-').map(Number);
   const I=num('sf_ib'),L=num('sf_l'),c=Math.min(1,num('sf_cos')),mat=$('sf_mat').value,ins=$('sf_ins').value,mm=parseFloat($('sf_mm').value);
-  const pre=num('sf_pre')||0,lim=num('sf_lim');
+  const pre=num('sf_pre')||0,lim=sfType==='egen'?num('sf_lim'):+sfType;
+  $('sf_type').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===sfType));$('sf_limw').classList.toggle('hide',sfType!=='egen');
   const s=Math.sqrt(Math.max(0,1-c*c));
   const R=R20[mat][mm]/1000*KT[ins];
   const b=ph===1?2:Math.sqrt(3);
@@ -496,7 +498,7 @@ function calcSF(){
   if(![I,L,c,lim].every(Number.isFinite)||I<0||L<0){verdict('sf_v',null,'–','Sjekk inndata');rows('sf_calc',[]);warnOut('sf_warn',[]);return}
   const ok=tot<=lim+1e-9;
   const Lmax=per>0?((lim-pre)/100*U)/per:Infinity;
-  verdict('sf_v',ok,ok?'OK':'IKKE OK',`Totalt ${f(tot,2)} % av maks ${f(lim,1)} % · ${String(mm).replace('.',',')} mm² ${mat==='al'?'Al':'Cu'}`);
+  verdict('sf_v',ok,ok?'OK':'IKKE OK',`Totalt ${f(tot,2)} % av maks ${f(lim,1)} %${sfType==='3'?' (belysning)':sfType==='5'?' (andre kurser)':''} · ${String(mm).replace('.',',')} mm² ${mat==='al'?'Al':'Cu'}`);
   if(pre>=lim)w.push('Spenningsfallet før kursen er allerede på eller over grensen.');
   if(!ok&&Lmax>0)w.push(`Kursen kan maks være ${f(Lmax,0)} m med dette tverrsnittet, eller velg større tverrsnitt.`);
   rows('sf_calc',[['ΔU i kursen',f(dU,2)+' V'],['Spenningsfall i kursen',f(pct,2)+' %'],['Før kursen',f(pre,2)+' %'],['Totalt',f(tot,2)+' %'],['Maks lengde for grensen',Number.isFinite(Lmax)&&Lmax>0?f(Lmax,0)+' m':'–'],['R per leder (driftstemp.)',f(R*1000,3)+' mΩ/m'],['X per leder',f(XM*1000,2)+' mΩ/m']]);
@@ -557,6 +559,7 @@ F2.forEach(k=>{const e=$(k);const fn=k.startsWith('sf')?calcSF:k.startsWith('ks'
 $('ks_stikk').addEventListener('change',calcKS);
 $('sf_mat').addEventListener('change',()=>{fillSel('sf_mm',$('sf_mat').value,0,2.5);calcSF()});
 $('ks_mat').addEventListener('change',()=>{fillSel('ks_mm',$('ks_mat').value,0,2.5);calcKS()});
+$('sf_type').addEventListener('click',e=>{const b=e.target.closest('button');if(b){sfType=b.dataset.v;calcSF()}});
 $('ks_seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ksSys=b.dataset.v;calcKS()}});
 $('cc_mode').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ccMode=b.dataset.v;calcCC()}});
 $('setAl').addEventListener('change',()=>{applyAl();calcSF();calcKS()});
