@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://gc.zgo.at; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://elektrokontroll.goatcounter.com; connect-src 'self' https://elektrokontroll.goatcounter.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#16191c">
 <link rel="manifest" href="manifest.json">
 <title>Elektrokontroll</title>
@@ -458,7 +460,8 @@ segs.forEach(s=>$(s).addEventListener('click',e=>{const b=e.target.closest('butt
 fields.forEach(k=>{$(k).addEventListener('input',calc);$(k).addEventListener('change',calc)});
 $('mat').addEventListener('change',()=>{fillSizes();calc()});
 $('setAl').addEventListener('change',calc);
-function showTab(t){if(!document.querySelector(`[data-panel="${t}"]`))t='krav';document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hide',p.dataset.panel!==t));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('mini').style.visibility=t==='krav'?'visible':'hidden'}
+const TABS=['krav','spenningsfall','kortslutning','varmekabel','kontinuitet','innstillinger'];
+function showTab(t){if(!TABS.includes(t))t='krav';document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hide',p.dataset.panel!==t));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('mini').style.visibility=t==='krav'?'visible':'hidden'}
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b){history.replaceState(null,'','#'+b.dataset.tab);showTab(b.dataset.tab)}});
 window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
 $('sys').addEventListener('change',()=>{$('nl').value=$('sys').value==='1-230'?'2':'3';calc()});
@@ -591,6 +594,6 @@ applyAl();calcKT();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 }
 </script>
-<script data-goatcounter="https://elektrokontroll.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script data-goatcounter="https://elektrokontroll.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
 </body>
 </html>
