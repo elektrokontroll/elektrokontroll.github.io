@@ -285,7 +285,7 @@ details li{margin-bottom:6px}
     <div class="grid" style="margin-top:12px">
       <div class="wide"><label for="cc_a">Oppvarmet areal (m²)</label><input id="cc_a" type="number" inputmode="decimal" step="0.1" min="0" value="6"></div>
       <div class="cck"><label for="cc_len">Kabellengde (m)</label><input id="cc_len" type="number" inputmode="decimal" step="0.1" min="0" value="60"></div>
-      <div class="cck"><label for="cc_p">Kabelens effekt (W)</label><input id="cc_p" type="number" inputmode="decimal" step="1" min="0" value="600"></div>
+      <div class="cck"><label for="cc_p">Kabelens effekt (W, valgfri)</label><input id="cc_p" type="number" inputmode="decimal" step="1" min="0" value="600"></div>
       <div class="cce hide"><label for="cc_wm2">Ønsket effekt (W/m²)</label><input id="cc_wm2" type="number" inputmode="decimal" step="1" min="0" value="100"></div>
       <div class="cce hide"><label for="cc_wm">Kabelens effekt per meter (W/m)</label><input id="cc_wm" type="number" inputmode="decimal" step="0.1" min="0" value="10"></div>
     </div>
@@ -556,17 +556,20 @@ function calcCC(){
   const A=num('cc_a');let L,P;
   if(ccMode==='kabel'){L=num('cc_len');P=num('cc_p')}
   else{const wm2=num('cc_wm2'),wm=num('cc_wm');P=wm2*A;L=P/wm}
-  if(![A,L,P].every(Number.isFinite)||A<=0||L<=0||P<0){verdict('cc_v',null,'–','Sjekk inndata');rows('cc_calc',[]);warnOut('cc_warn',[]);return}
-  const cc=A/L*100,wm2=P/A,wm=P/L;
+  if(![A,L].every(Number.isFinite)||A<=0||L<=0){verdict('cc_v',null,'–',ccMode==='kabel'?'Legg inn areal og kabellengde':'Legg inn areal, ønsket W/m² og kabelens W/m');rows('cc_calc',[]);warnOut('cc_warn',[]);return}
+  const hasP=Number.isFinite(P)&&P>0;
+  const cc=A/L*100,wm2=hasP?P/A:NaN,wm=hasP?P/L:NaN;
   const mn=num('cc_min'),mx=num('cc_maxc'),mw=num('cc_maxw');const w=[];
   if(Number.isFinite(mn)&&cc<mn)w.push(`CC ${f(cc,1)} cm er mindre enn produsentens minimum ${f(mn,1)} cm – velg kortere kabel eller større areal.`);
   if(Number.isFinite(mx)&&cc>mx)w.push(`CC ${f(cc,1)} cm er større enn produsentens maksimum ${f(mx,1)} cm – velg lengre kabel.`);
-  if(Number.isFinite(mw)&&wm2>mw)w.push(`${f(wm2,0)} W/m² er over maks ${f(mw,0)} W/m² for gulvet – velg kabel med lavere effekt.`);
-  const any=[mn,mx,mw].some(Number.isFinite);
+  if(hasP&&Number.isFinite(mw)&&wm2>mw)w.push(`${f(wm2,0)} W/m² er over maks ${f(mw,0)} W/m² for gulvet – velg kabel med lavere effekt.`);
+  const any=[mn,mx].some(Number.isFinite)||(hasP&&Number.isFinite(mw));
   const ok=any?w.length===0:null;
   verdict('cc_v',ok,`CC ${f(cc,1)} cm`,ok==null?'Legg inn produsentens grenser for OK/IKKE OK':ok?'Innenfor produsentens grenser':'Utenfor produsentens grenser');
-  const r=[['CC-avstand',f(cc,1)+' cm ('+f(cc*10,0)+' mm)'],['Effekt per m²',f(wm2,0)+' W/m²'],['Effekt per meter kabel',f(wm,1)+' W/m'],['Total effekt',f(P,0)+' W'],['Kabellengde',f(L,1)+' m'],['Strøm ved 230 V',f(P/230,2)+' A']];
-  if(ccMode==='effekt')w.unshift(`Velg en kabel på ca. ${f(L,0)} m / ${f(P,0)} W. Ved standardlengde: bytt til «Fra valgt kabel» og legg inn faktisk lengde og effekt.`);
+  const r=[['CC-avstand',f(cc,1)+' cm ('+f(cc*10,0)+' mm)'],['Kabellengde',f(L,1)+' m'],['Oppvarmet areal',f(A,1)+' m²']];
+  if(hasP)r.push(['Effekt per m²',f(wm2,0)+' W/m²'],['Effekt per meter kabel',f(wm,1)+' W/m'],['Total effekt',f(P,0)+' W'],['Strøm ved 230 V',f(P/230,2)+' A']);
+  else if(Number.isFinite(mw))w.push('Legg inn kabelens effekt for å kontrollere maks W/m².');
+  if(ccMode==='effekt')w.unshift(`Velg en kabel på ca. ${f(L,0)} m / ${f(P,0)} W. Ved standardlengde: bytt til «Fra valgt kabel» og legg inn faktisk lengde.`);
   rows('cc_calc',r);warnOut('cc_warn',w);save2()}
 
 /* ---- hendelser ---- */
