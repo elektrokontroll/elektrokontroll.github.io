@@ -72,6 +72,7 @@ details li{margin-bottom:6px}
 .panel .card{max-width:720px}
 .tog{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
 .tog input{width:52px;height:30px;min-height:0;accent-color:var(--ok)}
+.guide{border-top:1px solid var(--line);padding:12px 0}.guide:first-child{border-top:0;padding-top:0}.guide h3{margin:0 0 6px;font-size:16px}.guide ol{margin:0;padding-left:22px}.guide li{margin-bottom:6px}.mine{display:inline-block;font-size:12px;font-weight:600;background:var(--ok);color:#fff;border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:2px}
 .reset{background:transparent;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:15px;border-radius:9px;min-height:44px;padding:6px 14px;cursor:pointer}
 </style>
 </head>
@@ -326,6 +327,14 @@ details li{margin-bottom:6px}
     <label class="tog" for="setAl"><span style="font-size:16px;color:var(--ink)">Vis aluminiumsledere</span><input type="checkbox" id="setAl"></label>
     <p class="hint">Når denne er på, kan du velge Cu eller Al under «Kabel». Aluminium følger alltid de generelle kravene i 433.1 (bolig-kravet i 823.433.1 gjelder kobber 1,5–4 mm²).</p>
   </div>
+  <div class="card"><h2>Lagre som app</h2>
+    <button type="button" class="reset" id="appBtn" aria-expanded="false" aria-controls="appGuide" style="width:100%">Hvordan lagre som app</button>
+    <div id="appGuide" class="hide" style="margin-top:14px">
+      <p id="appState" class="hint" style="font-size:15px;margin-top:0"></p>
+      <button type="button" id="appInstall" class="reset hide" style="width:100%;background:var(--ok);color:#fff;border-color:var(--ok);margin-bottom:12px">Installer nå</button>
+      <div id="appSteps"></div>
+      <p class="hint">Når appen er lagret, får den eget ikon, åpner uten adressefelt og virker uten nett. Åpne den én gang med nett etter installering. Nye versjoner hentes automatisk når du har nett.</p>
+    </div></div>
   <div class="card"><h2>Om appen</h2><p class="hint" style="font-size:15px">Versjon 3 · Bygger på NEK 400:2026 / 2022. Strømføringsevne fra IEC 60364-5-52 tabell B.52.2–B.52.5 og B.52.10–B.52.13, som NEK 400-5-52 bygger på. Innstillinger og siste verdier lagres bare på denne enheten. Appen teller anonyme besøk (GoatCounter, uten cookies).</p></div>
 </section>
 <a class="mini" id="mini" href="#resultat"><b id="minib">–</b><span id="minis"></span></a>
@@ -594,6 +603,32 @@ $('kt_mat').addEventListener('change',()=>{fillKT();calcKT()});
 $('setAl').addEventListener('change',()=>{applyAl();calcKT()});
 $('kt_hent').addEventListener('click',()=>{const K=window.KRAV;if(!K)return;$('kt_mat').value=K.mat;fillKT();$('kt_mm').value=String(K.mm);if(num('sf_l')>0)$('kt_l').value=$('sf_l').value;calcKT()});
 applyAl();calcKT();
+
+/* ---- lagre som app ---- */
+{
+const ua=navigator.userAgent;
+const isIOS=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/.test(ua);
+const isFF=/Firefox|FxiOS/.test(ua),isEdge=/Edg\//.test(ua),isSamsung=/SamsungBrowser/.test(ua);
+const isMacSafari=!isIOS&&/Macintosh/.test(ua)&&/Safari/.test(ua)&&!/Chrome|Chromium|Edg/.test(ua);
+const installed=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const G=[
+ {k:'android',t:'Android (Chrome)',s:['Åpne elektrokontroll.github.io i <b>Chrome</b>.','Trykk på <b>⋮</b> (tre prikker) øverst til høyre.','Velg <b>Installer app</b> eller <b>Legg til på startsiden</b>.','Trykk <b>Installer</b>. Ikonet legger seg på startskjermen.']},
+ {k:'samsung',t:'Android (Samsung Internet)',s:['Åpne siden i <b>Samsung Internet</b>.','Trykk på <b>≡</b> (meny) nederst til høyre.','Velg <b>Legg til side på</b> → <b>Startskjerm</b>.']},
+ {k:'ios',t:'iPhone / iPad (Safari)',s:['Åpne elektrokontroll.github.io i <b>Safari</b> (ikke Chrome).','Trykk på <b>Del-knappen</b> (firkant med pil opp) nederst.','Bla ned og velg <b>Legg til på Hjem-skjerm</b>.','Trykk <b>Legg til</b> øverst til høyre.']},
+ {k:'pc',t:'PC (Chrome / Edge)',s:['Åpne siden i <b>Chrome</b> eller <b>Edge</b>.','Klikk på <b>installer-ikonet</b> helt til høyre i adressefeltet (skjerm med pil).','Eller: meny <b>⋮</b> / <b>…</b> → <b>Lagre og del</b> / <b>Apper</b> → <b>Installer Elektrokontroll</b>.','Appen åpner i eget vindu og får ikon på skrivebordet / i startmenyen.']},
+ {k:'mac',t:'Mac (Safari)',s:['Åpne siden i <b>Safari</b>.','Velg <b>Fil</b> → <b>Legg til i Dock</b>.']},
+ {k:'ff',t:'Firefox',s:['Firefox kan ikke installere nettsider som app.','Lag et <b>bokmerke</b>, eller bruk Chrome/Edge for å installere.']}];
+const mine=isIOS?'ios':isSamsung?'samsung':isAndroid?'android':isFF?'ff':isMacSafari?'mac':'pc';
+const order=[mine,...G.map(g=>g.k).filter(k=>k!==mine)];
+$('appSteps').innerHTML=order.map(k=>{const g=G.find(x=>x.k===k);return `<div class="guide"><h3>${g.t}${k===mine?'<span class="mine">Din enhet</span>':''}</h3><ol>${g.s.map(x=>`<li>${x}</li>`).join('')}</ol></div>`}).join('');
+$('appState').textContent=installed?'✓ Du bruker allerede appen som installert app.':'Følg stegene for din enhet under.';
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('appInstall').classList.remove('hide')});
+$('appInstall').addEventListener('click',async()=>{if(!deferred)return;deferred.prompt();try{const r=await deferred.userChoice;if(r.outcome==='accepted')$('appState').textContent='✓ Appen er installert.'}catch(e){}deferred=null;$('appInstall').classList.add('hide')});
+window.addEventListener('appinstalled',()=>{$('appState').textContent='✓ Appen er installert.';$('appInstall').classList.add('hide')});
+$('appBtn').addEventListener('click',()=>{const open=$('appGuide').classList.toggle('hide')===false;$('appBtn').setAttribute('aria-expanded',open);$('appBtn').textContent=open?'Skjul veiledning':'Hvordan lagre som app'});
+}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 }
 </script>
